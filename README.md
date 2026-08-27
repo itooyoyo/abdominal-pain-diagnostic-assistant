@@ -2,7 +2,11 @@
 
 ## Current status
 
-Foundation only / medical rules not implemented
+Adaptive Differential Engine Prototype / not a clinical completion version
+
+The browser-only prototype separates input normalization, clinical context,
+differential evaluation, adaptive question selection, stop evaluation, and
+presentation. It does not use external diagnostic APIs.
 
 ## Planned flow
 
@@ -16,6 +20,7 @@ Foundation only / medical rules not implemented
 ```bash
 npm install
 npm run dev
+npm test
 npm run lint
 npm run build
 ```
