@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { LOCATIONS, ONSET_OPTIONS } from './lib/abdominal/abdominal-findings.js'
 import { normalizeAbdominalInput } from './lib/abdominal/abdominal-input-adapter.js'
 import { evaluateDifferential } from './lib/abdominal/abdominal-differential-engine.js'
@@ -20,7 +20,16 @@ function App() {
   const [roundQuestions, setRoundQuestions] = useState([])
   const [screen, setScreen] = useState('initial')
   const [result, setResult] = useState(null)
+  const resultHeadingRef = useRef(null)
   const evaluation = useMemo(() => evaluateDifferential(normalizeAbdominalInput({ ...form, answers })), [form, answers])
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+      if (screen === 'result') resultHeadingRef.current?.focus({ preventScroll: true })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [screen, round])
 
   const setVital = (key, patch) => setForm((current) => ({ ...current, vitals: { ...current.vitals, [key]: { ...current.vitals[key], ...patch } } }))
   const start = (event) => { event.preventDefault(); setRound(1); setRoundQuestions(selectAdaptiveQuestions(evaluation, { round: 1 })); setScreen('questions') }
@@ -35,26 +44,26 @@ function App() {
   }
   const reset = () => { setForm(makeForm()); setAnswers({}); setRound(0); setRoundQuestions([]); setResult(null); setScreen('initial') }
 
-  return <main className="app-shell">
+  return <main className={`app-shell screen-${screen}`}>
     <header className="app-header"><div><p className="eyebrow">Dr Ito Medical Hub</p><h1>腹痛鑑別支援ツール</h1><p className="subtitle">少ない入力から、次に確認する情報と鑑別候補を整理します。</p></div><span className="badge">Prototype</span></header>
     <div className="scope-note">成人を対象とした検証用プロトタイプです。診断を確定するものではありません。</div>
+    <Progress screen={screen} round={round} />
 
-    {screen === 'initial' && <form className="panel" onSubmit={start}>
+    {screen === 'initial' && <form id="initial-form" className="panel" onSubmit={start}>
       <Heading number="1" title="最初に確認すること" text="年齢、主な痛みの場所、発症とVitalを入力します。" />
-      <label className="field age-field">年齢<span className="input-suffix"><input type="number" min="18" max="120" inputMode="numeric" value={form.age} onChange={(e) => setForm({ ...form, age: e.target.value })} required />歳</span></label>
-      <fieldset><legend>主に痛む部位</legend><div className="choice-grid">{LOCATIONS.map(([value, label]) => <Choice key={value} name="location" selected={form.primaryLocation === value} onChange={() => setForm({ ...form, primaryLocation: value })} required>{label}</Choice>)}</div></fieldset>
-      <fieldset><legend>発症速度</legend><div className="onset-grid">{ONSET_OPTIONS.map(([value, label, help]) => <Choice key={value} name="onset" selected={form.onsetSpeed === value} onChange={() => setForm({ ...form, onsetSpeed: value })} required><strong>{label}</strong><small>{help}</small></Choice>)}</div></fieldset>
-      <fieldset><legend>Vital signs</legend><p className="field-help">実測値を入力してください。測定していない項目は「未測定」のまま進められます。</p><div className="vital-grid">{VITALS.map(([key, label, unit]) => { const vital = form.vitals[key]; const unmeasured = vital.status === 'not_assessed'; return <div className="vital-card" key={key}><label htmlFor={`v-${key}`}>{label}</label><div className="vital-input"><input id={`v-${key}`} type="number" step={key === 'BT' ? '.1' : '1'} inputMode="decimal" value={vital.value} disabled={unmeasured} onChange={(e) => setVital(key, { value: e.target.value, status: 'present' })} /><span>{unit}</span></div><label className="neutral-check"><input type="checkbox" checked={unmeasured} onChange={(e) => setVital(key, { status: e.target.checked ? 'not_assessed' : 'present', value: '' })} />未測定</label></div> })}</div></fieldset>
-      <button className="primary" type="submit">次に確認することへ</button>
+      <section className="initial-section patient-section"><label className="field age-field">年齢<span className="input-suffix"><input type="number" min="18" max="120" inputMode="numeric" value={form.age} onChange={(e) => setForm({ ...form, age: e.target.value })} required />歳</span></label></section>
+      <fieldset className="initial-section pain-location-section"><legend>主に痛む部位</legend><div className="choice-grid">{LOCATIONS.map(([value, label]) => <Choice key={value} name="location" selected={form.primaryLocation === value} onChange={() => setForm({ ...form, primaryLocation: value })} required>{label}</Choice>)}</div></fieldset>
+      <fieldset className="initial-section onset-section"><legend>発症速度</legend><div className="onset-grid">{ONSET_OPTIONS.map(([value, label, help]) => <Choice key={value} name="onset" selected={form.onsetSpeed === value} onChange={() => setForm({ ...form, onsetSpeed: value })} required><strong>{label}</strong><small>{help}</small></Choice>)}</div></fieldset>
+      <fieldset className="initial-section vital-section"><legend>Vital signs</legend><p className="field-help">実測値を入力してください。測定していない項目は「未測定」のまま進められます。</p><div className="vital-grid">{VITALS.map(([key, label, unit]) => { const vital = form.vitals[key]; const unmeasured = vital.status === 'not_assessed'; return <div className="vital-card" key={key}><label htmlFor={`v-${key}`}>{label}</label><div className="vital-input"><input id={`v-${key}`} type="number" step={key === 'BT' ? '.1' : '1'} inputMode="decimal" value={vital.value} disabled={unmeasured} onChange={(e) => setVital(key, { value: e.target.value, status: 'present' })} /><span>{unit}</span></div><label className="neutral-check"><input type="checkbox" checked={unmeasured} onChange={(e) => setVital(key, { status: e.target.checked ? 'not_assessed' : 'present', value: '' })} />未測定</label></div> })}</div></fieldset>
     </form>}
 
     {screen === 'questions' && <section className="panel">
       <Heading number="2" title="次に確認すること" text={`Round ${round}・現在の候補を分ける質問を最大3問表示しています。`} />
       <div className="question-list">{roundQuestions.map((question, index) => <fieldset className="question-card" key={question.id}><legend>{index + 1}. {question.label}</legend>{question.sensitive && <p className="privacy-note">必要な鑑別のため、この段階でのみ表示しています。</p>}<div className="answer-grid">{ANSWERS.map(([value, label]) => <Choice key={value} name={question.id} selected={answers[question.id] === value} onChange={() => setAnswers((current) => ({ ...current, [question.id]: value }))}>{label}</Choice>)}</div></fieldset>)}</div>
-      <div className="button-row"><button className="secondary" onClick={() => setScreen('initial')}>戻る</button><button className="primary" onClick={next} disabled={roundQuestions.some((q) => !answers[q.id])}>{round >= 2 ? '結果を整理する' : '回答を反映する'}</button></div>
     </section>}
 
-    {screen === 'result' && result && <ResultScreen result={result} reset={reset} />}
+    {screen === 'result' && result && <ResultScreen result={result} reset={reset} headingRef={resultHeadingRef} />}
+    <BottomAction screen={screen} round={round} questions={roundQuestions} answers={answers} onBack={() => setScreen('initial')} onNext={next} onReset={reset} />
     <footer>制作：Dr Ito</footer>
   </main>
 }
@@ -62,6 +71,18 @@ function App() {
 function Heading({ number, title, text }) { return <div className="section-heading"><span>{number}</span><div><h2>{title}</h2><p>{text}</p></div></div> }
 function Choice({ children, selected, name, onChange, required = false }) { return <label className={`choice ${selected ? 'selected' : ''}`}><input type="radio" name={name} checked={selected} onChange={onChange} required={required} /><span>{children}</span></label> }
 function Info({ title, items }) { return <div><h4>{title}</h4><ul>{items.map((item) => <li key={item}>{item}</li>)}</ul></div> }
+
+function Progress({ screen, round }) {
+  const active = screen === 'initial' ? 0 : screen === 'questions' ? 1 : 2
+  const labels = ['基本情報', screen === 'questions' ? `追加確認 ${round}/2` : '追加確認', '結果']
+  return <nav className="progress" aria-label="診療支援の進行状況">{labels.map((label, index) => <div className={`progress-step ${index === active ? 'active' : ''} ${index < active ? 'complete' : ''}`} aria-current={index === active ? 'step' : undefined} key={label}><span>{index < active ? '✓' : index + 1}</span><strong>{label}</strong></div>)}</nav>
+}
+
+function BottomAction({ screen, round, questions, answers, onBack, onNext, onReset }) {
+  if (screen === 'initial') return <div className="bottom-action"><button className="primary" type="submit" form="initial-form">次へ</button></div>
+  if (screen === 'questions') return <div className="bottom-action two-actions"><button className="secondary" type="button" onClick={onBack}>戻る</button><button className="primary" type="button" onClick={onNext} disabled={questions.some((question) => !answers[question.id])}>{round >= 2 ? '結果を見る' : '回答を反映'}</button></div>
+  return <div className="bottom-action"><button className="secondary" type="button" onClick={onReset}>最初から入力</button></div>
+}
 
 function CandidateCard({ candidate, compact = false }) {
   return <article className={`candidate-card ${compact ? 'compact' : ''}`}>
@@ -80,7 +101,7 @@ function NextSteps({ result }) {
   return <section className="panel next-steps"><h2>次に確認すること</h2>{examFirst ? <>{exam}{tests}</> : <>{tests}{exam}</>}</section>
 }
 
-function ResultScreen({ result, reset }) {
+function ResultScreen({ result, headingRef }) {
   const statusFirst = ['insufficient_information', 'conflicting_information'].includes(result.stopReason)
   const hasCandidates = result.primaryDifferentials.length > 0
   const candidateSections = <>
@@ -89,12 +110,11 @@ function ResultScreen({ result, reset }) {
     {result.supportingGroups.length > 0 && <section className="panel supporting-results"><h2>併せて考える鑑別</h2>{result.supportingGroups.map((group) => <div className="supporting-group" key={group.category}><h3>{group.category}</h3>{group.candidates.map((candidate) => <details key={candidate.id} className="supporting-candidate"><summary><span>{candidate.displayName}</span><small>{STRENGTH[candidate.evidenceStrength]}</small></summary><CandidateCard candidate={candidate} compact /></details>)}</div>)}</section>}
   </>
   return <section className="results-stack">
-    <section className={`panel result-summary ${statusFirst ? 'status-alert' : ''}`}><p className="result-status">{STOP[result.stopReason] ?? '現在の情報から候補を整理しました'}</p>{statusFirst ? <><h2>{result.stopReason === 'conflicting_information' ? '入力情報に矛盾があります' : '判断に必要な情報が不足しています'}</h2>{result.missingImportantInformation.length > 0 && <Info title={result.stopReason === 'conflicting_information' ? '矛盾内容・再確認項目' : '不足情報・再確認すべき入力'} items={result.missingImportantInformation} />}</> : <><h2>現在もっとも考えやすい鑑別</h2><p className="summary-diagnoses">{result.summary.diagnoses.join('、') || '候補を十分に整理できません'}</p>{result.summary.reasons.length > 0 && <Info title="主な根拠" items={result.summary.reasons} />}{result.summary.nextAction && <p className="summary-action"><strong>次の確認：</strong>{result.summary.nextAction}</p>}</>}</section>
+    <section className={`panel result-summary ${statusFirst ? 'status-alert' : ''}`}><p className="result-status">{STOP[result.stopReason] ?? '現在の情報から候補を整理しました'}</p>{statusFirst ? <><h2 ref={headingRef} tabIndex="-1">{result.stopReason === 'conflicting_information' ? '入力情報に矛盾があります' : '判断に必要な情報が不足しています'}</h2>{result.missingImportantInformation.length > 0 && <Info title={result.stopReason === 'conflicting_information' ? '矛盾内容・再確認項目' : '不足情報・再確認すべき入力'} items={result.missingImportantInformation} />}</> : <><h2 ref={headingRef} tabIndex="-1">現在もっとも考えやすい鑑別</h2><p className="summary-diagnoses">{result.summary.diagnoses.join('、') || '候補を十分に整理できません'}</p>{result.summary.reasons.length > 0 && <Info title="主な根拠" items={result.summary.reasons} />}{result.summary.nextAction && <p className="summary-action"><strong>次の確認：</strong>{result.summary.nextAction}</p>}</>}</section>
     {statusFirst ? <details className="panel reference-candidates"><summary>参考となる鑑別候補（{result.currentDifferentials.length}）</summary>{candidateSections}</details> : candidateSections}
     {!statusFirst && <NextSteps result={result} />}
     {!statusFirst && result.missingImportantInformation.length > 0 && <details className="panel missing"><summary>不足している重要情報（{result.missingImportantInformation.length}）</summary><ul>{result.missingImportantInformation.map((item) => <li key={item}>{item}</li>)}</ul></details>}
     {result.otherDifferentials.length > 0 && <details className="panel other-results"><summary>その他に考える鑑別（{result.otherDifferentials.length}）</summary><ul>{result.otherDifferentials.map((candidate) => <li key={candidate.id}>{candidate.displayName}</li>)}</ul></details>}
-    <button className="secondary restart" onClick={reset}>最初から入力する</button>
   </section>
 }
 export default App
