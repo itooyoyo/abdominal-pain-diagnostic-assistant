@@ -9,7 +9,7 @@ import { buildPresentationModel } from './lib/abdominal/abdominal-presentation-m
 const VITALS = [['SBP', '収縮期血圧', 'mmHg'], ['DBP', '拡張期血圧', 'mmHg'], ['HR', '心拍数', '/min'], ['RR', '呼吸数', '/min'], ['SpO2', 'SpO₂', '%'], ['BT', '体温', '℃']]
 const ANSWERS = [['present', 'あり'], ['absent', 'なし'], ['unknown', '不明'], ['not_assessed', '未評価'], ['indeterminate', '判定困難']]
 const STRENGTH = { STRONG_COMBINATION: '複数所見で強く支持', MODERATE: '中等度の支持', WEAK: '弱い支持', CONTEXT: '関連context' }
-const STOP = { testing_required: '問診での追加分離より、検査による評価が必要です。', physical_exam_required: '次に身体診察による確認が必要です。', candidate_supported: '現在の情報で候補を整理しました。', conflicting_information: '矛盾する情報があり、無理に一つへ絞っていません。', insufficient_information: '候補整理に必要な情報が不足しています。' }
+const STOP = { testing_required: '問診だけでは絞り切れません。検査で鑑別を進めます', physical_exam_required: '次に身体診察で確認します', candidate_supported: '現在の情報から鑑別候補を整理しました', conflicting_information: '入力情報に矛盾があります。内容を再確認してください', insufficient_information: '判断に必要な情報が不足しています' }
 const makeVitals = () => Object.fromEntries(VITALS.map(([key]) => [key, { value: '', status: 'not_assessed' }]))
 const makeForm = () => ({ age: '', primaryLocation: '', onsetSpeed: '', vitals: makeVitals() })
 
@@ -54,14 +54,7 @@ function App() {
       <div className="button-row"><button className="secondary" onClick={() => setScreen('initial')}>戻る</button><button className="primary" onClick={next} disabled={roundQuestions.some((q) => !answers[q.id])}>{round >= 2 ? '結果を整理する' : '回答を反映する'}</button></div>
     </section>}
 
-    {screen === 'result' && result && <section className="results-stack">
-      <section className="panel"><Heading number="3" title="鑑別の整理" text={STOP[result.stopReason] ?? '現在の情報から候補を整理しました。'} /></section>
-      <section className="panel"><h2>現在考えやすい鑑別</h2><div className="candidate-list">{result.currentDifferentials.length ? result.currentDifferentials.map((candidate, index) => <article className="candidate-card" key={candidate.id}><div className="candidate-title"><span>{index + 1}</span><div><h3>{candidate.displayName}</h3><p>{candidate.category}・{STRENGTH[candidate.evidenceStrength]}</p></div></div>{candidate.supporting.length > 0 && <Info title="支持する所見" items={candidate.supporting} />}{candidate.unknown.length > 0 && <Info title="まだ不明な重要所見" items={candidate.unknown.slice(0, 3)} />}{candidate.guards.length > 0 && <div className="guard-note">{candidate.guards.join('。')}</div>}</article>) : <p>現在の情報だけでは候補を十分に整理できません。</p>}</div></section>
-      {(result.examinationHints.length > 0 || result.suggestedTests.length > 0) && <section className="panel next-steps"><h2>次に確認すること</h2>{result.examinationHints.length > 0 && <Info title="身体診察" items={result.examinationHints} />}{result.suggestedTests.length > 0 && <div><h3>鑑別を進める検査</h3><ul>{result.suggestedTests.map((test) => <li key={test.name}><strong>{test.name}</strong><span>{test.level}</span></li>)}</ul></div>}</section>}
-      {result.missingImportantInformation.length > 0 && <section className="panel missing"><h2>不足している重要情報</h2><ul>{result.missingImportantInformation.map((item) => <li key={item}>{item}</li>)}</ul></section>}
-      {result.otherDifferentials.length > 0 && <details className="panel"><summary>その他に考える鑑別</summary><ul>{result.otherDifferentials.map((candidate) => <li key={candidate.id}>{candidate.displayName}</li>)}</ul></details>}
-      <button className="secondary restart" onClick={reset}>最初から入力する</button>
-    </section>}
+    {screen === 'result' && result && <ResultScreen result={result} reset={reset} />}
     <footer>制作：Dr Ito</footer>
   </main>
 }
@@ -69,4 +62,39 @@ function App() {
 function Heading({ number, title, text }) { return <div className="section-heading"><span>{number}</span><div><h2>{title}</h2><p>{text}</p></div></div> }
 function Choice({ children, selected, name, onChange, required = false }) { return <label className={`choice ${selected ? 'selected' : ''}`}><input type="radio" name={name} checked={selected} onChange={onChange} required={required} /><span>{children}</span></label> }
 function Info({ title, items }) { return <div><h4>{title}</h4><ul>{items.map((item) => <li key={item}>{item}</li>)}</ul></div> }
+
+function CandidateCard({ candidate, compact = false }) {
+  return <article className={`candidate-card ${compact ? 'compact' : ''}`}>
+    <div className="candidate-title"><span>{candidate.rawRank}</span><div><h3>{candidate.displayName}</h3><p>{candidate.category}・{STRENGTH[candidate.evidenceStrength]}</p></div></div>
+    {candidate.displayEvidence.length > 0 && <Info title="根拠" items={candidate.displayEvidence} />}
+    {candidate.importantUnknown.length > 0 && <p className="important-unknown"><strong>重要な未確認情報：</strong>{candidate.importantUnknown[0]}</p>}
+    {(candidate.supporting.length > candidate.displayEvidence.length || candidate.weakContradictions.length > 0 || candidate.guards.length > 0) && <details className="candidate-details"><summary>詳細を確認</summary>{candidate.supporting.length > 0 && <Info title="保持している根拠" items={candidate.supporting} />}{candidate.weakContradictions.length > 0 && <Info title="典型的でない点" items={candidate.weakContradictions} />}{candidate.guards.length > 0 && <div className="guard-note">{candidate.guards.join('。')}</div>}</details>}
+  </article>
+}
+
+function NextSteps({ result }) {
+  if (result.examinationHints.length === 0 && result.suggestedTests.length === 0) return null
+  const examFirst = result.stopReason === 'physical_exam_required'
+  const exam = result.examinationHints.length > 0 && <Info title={examFirst ? '次に確認する身体所見' : '身体診察'} items={result.examinationHints} />
+  const tests = result.suggestedTests.length > 0 && <div><h3>鑑別を進める検査</h3><ul>{result.suggestedTests.map((test) => <li key={test.name}><strong>{test.name}</strong><span>{test.level}</span></li>)}</ul></div>
+  return <section className="panel next-steps"><h2>次に確認すること</h2>{examFirst ? <>{exam}{tests}</> : <>{tests}{exam}</>}</section>
+}
+
+function ResultScreen({ result, reset }) {
+  const statusFirst = ['insufficient_information', 'conflicting_information'].includes(result.stopReason)
+  const hasCandidates = result.primaryDifferentials.length > 0
+  const candidateSections = <>
+    {hasCandidates && <section className="panel primary-results"><h2>現在もっとも考えやすい鑑別</h2><div className="candidate-list">{result.primaryDifferentials.map((candidate) => <CandidateCard key={candidate.id} candidate={candidate} />)}</div></section>}
+    {result.importantCompetingDifferentials.length > 0 && <section className="panel important-competitors"><h2>重要な競合候補</h2><div className="candidate-list">{result.importantCompetingDifferentials.map((candidate) => <CandidateCard key={candidate.id} candidate={candidate} compact />)}</div></section>}
+    {result.supportingGroups.length > 0 && <section className="panel supporting-results"><h2>併せて考える鑑別</h2>{result.supportingGroups.map((group) => <div className="supporting-group" key={group.category}><h3>{group.category}</h3>{group.candidates.map((candidate) => <details key={candidate.id} className="supporting-candidate"><summary><span>{candidate.displayName}</span><small>{STRENGTH[candidate.evidenceStrength]}</small></summary><CandidateCard candidate={candidate} compact /></details>)}</div>)}</section>}
+  </>
+  return <section className="results-stack">
+    <section className={`panel result-summary ${statusFirst ? 'status-alert' : ''}`}><p className="result-status">{STOP[result.stopReason] ?? '現在の情報から候補を整理しました'}</p>{statusFirst ? <><h2>{result.stopReason === 'conflicting_information' ? '入力情報に矛盾があります' : '判断に必要な情報が不足しています'}</h2>{result.missingImportantInformation.length > 0 && <Info title={result.stopReason === 'conflicting_information' ? '矛盾内容・再確認項目' : '不足情報・再確認すべき入力'} items={result.missingImportantInformation} />}</> : <><h2>現在もっとも考えやすい鑑別</h2><p className="summary-diagnoses">{result.summary.diagnoses.join('、') || '候補を十分に整理できません'}</p>{result.summary.reasons.length > 0 && <Info title="主な根拠" items={result.summary.reasons} />}{result.summary.nextAction && <p className="summary-action"><strong>次の確認：</strong>{result.summary.nextAction}</p>}</>}</section>
+    {statusFirst ? <details className="panel reference-candidates"><summary>参考となる鑑別候補（{result.currentDifferentials.length}）</summary>{candidateSections}</details> : candidateSections}
+    {!statusFirst && <NextSteps result={result} />}
+    {!statusFirst && result.missingImportantInformation.length > 0 && <details className="panel missing"><summary>不足している重要情報（{result.missingImportantInformation.length}）</summary><ul>{result.missingImportantInformation.map((item) => <li key={item}>{item}</li>)}</ul></details>}
+    {result.otherDifferentials.length > 0 && <details className="panel other-results"><summary>その他に考える鑑別（{result.otherDifferentials.length}）</summary><ul>{result.otherDifferentials.map((candidate) => <li key={candidate.id}>{candidate.displayName}</li>)}</ul></details>}
+    <button className="secondary restart" onClick={reset}>最初から入力する</button>
+  </section>
+}
 export default App

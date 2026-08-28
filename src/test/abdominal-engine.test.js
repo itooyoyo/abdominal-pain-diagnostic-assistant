@@ -118,6 +118,63 @@ test('major candidate survives presentation limit', () => {
   assert.ok(presentation.currentDifferentials.some(({ id }) => id === 'mesenteric_ischemia'))
 })
 
+test('presentation preserves raw candidates evidence unknown contradictions tests and examination hints', () => {
+  const evaluation = evaluate(raw('epigastric', { backRadiation: 'present', nauseaVomiting: 'present', chestSymptoms: 'absent' }, { age: 68 }))
+  const presentation = buildPresentationModel(evaluation, { shouldStop: true, stopReason: 'testing_required' })
+  assert.strictEqual(presentation.rawCandidates, evaluation.candidates)
+  assert.deepEqual(presentation.rawEvidence, evaluation.candidates.map(({ id, supportingFindings }) => ({ id, supportingFindings })))
+  assert.deepEqual(presentation.rawUnknown, evaluation.candidates.map(({ id, unknownImportantFindings }) => ({ id, unknownImportantFindings })))
+  assert.deepEqual(presentation.rawContradictions, evaluation.candidates.map(({ id, weakContradictions }) => ({ id, weakContradictions })))
+  assert.deepEqual(presentation.rawTests, evaluation.candidates.flatMap(({ tests }) => tests))
+  assert.deepEqual(presentation.rawExaminationHints, evaluation.candidates.flatMap(({ examHints }) => examHints))
+})
+
+test('primary remains the raw top candidate', () => {
+  const evaluation = evaluate(raw('epigastric', { backRadiation: 'present', nauseaVomiting: 'present' }))
+  const presentation = buildPresentationModel(evaluation, { shouldStop: true, stopReason: 'testing_required' })
+  assert.equal(presentation.primaryDifferentials[0].id, evaluation.candidates[0].id)
+  assert.equal(presentation.primaryDifferentials[0].rawRank, 1)
+})
+
+test('major candidates are individually visible above other differentials', () => {
+  const scenarios = [
+    raw('flank', { groinRadiation: 'present', severePain: 'present', vascularContext: 'present' }, { age: 82, onsetSpeed: 'sudden' }),
+    raw('epigastric', { backRadiation: 'present', nauseaVomiting: 'present' }),
+    raw('RLQ', { unilateralPain: 'present', nauseaVomiting: 'present' }, { age: 26, onsetSpeed: 'sudden' }),
+    raw('epigastric', { chestSymptoms: 'absent', dyspnea: 'present', vascularContext: 'present' }, { age: 68 }),
+  ]
+  for (const input of scenarios) {
+    const evaluation = evaluate(input)
+    const presentation = buildPresentationModel(evaluation, { shouldStop: true, stopReason: 'testing_required' })
+    const visible = new Set([...presentation.primaryDifferentials, ...presentation.importantCompetingDifferentials].map(({ id }) => id))
+    for (const candidate of evaluation.candidates.filter(({ id }) => ['aortic_disease', 'mesenteric_ischemia', 'ectopic_pregnancy', 'GI_perforation', 'acute_coronary_syndrome'].includes(id))) assert.ok(visible.has(candidate.id))
+  }
+})
+
+test('display evidence deduplicates atomic findings covered by a combination', () => {
+  const evaluation = evaluate(FIXTURES[0][1])
+  const presentation = buildPresentationModel(evaluation, { shouldStop: true, stopReason: 'testing_required' })
+  const appendicitis = presentation.primaryDifferentials[0]
+  assert.ok(appendicitis.displayEvidence.some((item) => item.includes('疼痛移動') && item.includes('臍周囲から発症')))
+  assert.ok(!appendicitis.displayEvidence.includes('疼痛移動'))
+  assert.ok(!appendicitis.displayEvidence.includes('臍周囲から発症'))
+  assert.ok(appendicitis.supporting.includes('疼痛移動'))
+})
+
+test('candidate cards expose at most one important unknown while raw unknowns remain intact', () => {
+  const evaluation = evaluate(raw('LLQ', { pregnancyPossible: 'unknown', vaginalBleeding: 'present' }, { age: 28 }))
+  const presentation = buildPresentationModel(evaluation, { shouldStop: true, stopReason: 'testing_required' })
+  for (const candidate of [...presentation.primaryDifferentials, ...presentation.importantCompetingDifferentials]) assert.ok(candidate.importantUnknown.length <= 1)
+  assert.deepEqual(presentation.rawUnknown, evaluation.candidates.map(({ id, unknownImportantFindings }) => ({ id, unknownImportantFindings })))
+})
+
+test('suggested tests use exact-name deduplication only', () => {
+  const evaluation = evaluate(raw('epigastric', { backRadiation: 'present', nauseaVomiting: 'present' }))
+  const presentation = buildPresentationModel(evaluation, { shouldStop: true, stopReason: 'testing_required' })
+  assert.equal(new Set(presentation.suggestedTests.map(({ name }) => name)).size, presentation.suggestedTests.length)
+  for (const test of presentation.suggestedTests) assert.ok(evaluation.candidates.some((candidate) => candidate.tests.some(({ name }) => name === test.name)))
+})
+
 test('stop evaluator requests testing after strong combination', () => {
   const evaluation = evaluate(FIXTURES[0][1])
   const stop = evaluateStopCondition(evaluation, [], 2)

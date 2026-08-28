@@ -1,0 +1,46 @@
+body { min-width: 0; }
+.result-summary { padding-block: 22px; border-top: 5px solid #087083; }
+.result-status { margin: 0 0 10px; color: #3f626d; font-size: .88rem; font-weight: 750; }
+.result-summary h2, .primary-results h2, .important-competitors h2, .supporting-results h2, .next-steps h2 { margin: 0 0 14px; color: #073e51; font-size: 1.16rem; }
+.summary-diagnoses { margin: 0 0 12px; color: #073e51; font-size: clamp(1.2rem, 3vw, 1.55rem); font-weight: 850; line-height: 1.45; }
+.result-summary h4 { margin: 8px 0 4px; color: #496771; font-size: .82rem; }
+.result-summary ul { margin: 0; padding-left: 20px; line-height: 1.55; }
+.summary-action { margin: 12px 0 0; padding: 10px 12px; background: #eaf6f8; border-radius: 9px; line-height: 1.5; }
+.status-alert { border-top-color: #b36a15; }
+.status-alert h2 { color: #713f08; }
+.candidate-card.compact { padding: 14px; }
+.candidate-card.compact .candidate-title { margin-bottom: 9px; }
+.candidate-card h4 { margin-top: 7px; }
+.candidate-card ul { margin-bottom: 8px; }
+.important-unknown { margin: 10px 0 0; padding: 8px 10px; color: #415e68; background: #f1f6f7; border-radius: 8px; font-size: .82rem; line-height: 1.5; }
+.candidate-details { margin-top: 8px; border-top: 1px solid #dbe7ea; }
+.candidate-details summary { font-size: .82rem; }
+.important-competitors { border-left: 4px solid #c6862e; }
+.important-competitors .candidate-title > span { background: #9b641d; }
+.supporting-results { display: grid; gap: 12px; }
+.supporting-results > h2 { margin-bottom: 0; }
+.supporting-group { padding-top: 4px; }
+.supporting-group > h3 { margin: 0 0 6px; color: #496771; font-size: .82rem; letter-spacing: .03em; }
+.supporting-candidate { border: 1px solid #d3e0e4; border-radius: 10px; }
+.supporting-candidate + .supporting-candidate { margin-top: 7px; }
+.supporting-candidate > summary { justify-content: space-between; gap: 10px; padding: 4px 12px; }
+.supporting-candidate > summary small { color: #607880; font-weight: 500; }
+.supporting-candidate > .candidate-card { margin: 0 9px 9px; border-color: #e0e9eb; background: #fbfdfd; }
+.other-results ul { margin: 6px 0 0; padding-left: 22px; line-height: 1.7; }
+.reference-candidates[open] { display: grid; gap: 12px; }
+.reference-candidates > .panel { box-shadow: none; }
+.missing summary, .other-results summary, .reference-candidates > summary { justify-content: space-between; }
+.next-steps, .primary-results, .important-competitors, .supporting-results { padding-block: 22px; }
+.next-steps h3 { margin-top: 12px; }
+.next-steps ul { margin-bottom: 8px; }
+
+@media (max-width: 400px) {
+  .result-summary, .primary-results, .important-competitors, .supporting-results, .next-steps { padding-block: 16px; }
+  .candidate-card { padding: 14px 12px; }
+  .candidate-title { margin-bottom: 9px; }
+  .candidate-card ul { font-size: .88rem; line-height: 1.5; }
+  .summary-diagnoses { font-size: 1.18rem; }
+  .supporting-candidate > summary { align-items: flex-start; flex-direction: column; gap: 1px; }
+  .supporting-candidate > summary small { font-size: .72rem; }
+  .candidate-details summary { min-height: 40px; }
+}
