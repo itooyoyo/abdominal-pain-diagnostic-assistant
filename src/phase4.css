@@ -62,7 +62,7 @@ button.secondary { color: #e8f1f7; background: #132b40; border-color: #45647b; }
 button:disabled { color: #bdcbd4; background: #213141; border-color: #536c7f; opacity: 1; }
 
 .question-card { color: #e8f1f7; background: #10263a; border-color: #355268; }
-.question-card > .question-title { color: #f8fbfd; }
+.question-card > .question-title { margin: 0 0 7px; color: #f8fbfd; font-size: .9rem; font-weight: 750; line-height: 1.6; }
 .question-card > .question-helper { color: #c5d3dd; }
 
 .bottom-action {

@@ -59,7 +59,7 @@ function App() {
 
     {screen === 'questions' && <section className="panel">
       <Heading number="2" title="次に確認すること" text={`Round ${round}・現在の候補を分ける質問を最大3問表示しています。`} />
-      <div className="question-list">{roundQuestions.map((question, index) => <fieldset className="question-card" key={question.id}><legend className="question-title">{index + 1}. {question.label}</legend>{question.sensitive && <p className="privacy-note question-helper">必要な鑑別のため、この段階でのみ表示しています。</p>}<div className="answer-grid">{ANSWERS.map(([value, label]) => <Choice key={value} name={question.id} selected={answers[question.id] === value} onChange={() => setAnswers((current) => ({ ...current, [question.id]: value }))}>{label}</Choice>)}</div></fieldset>)}</div>
+      <div className="question-list">{roundQuestions.map((question, index) => { const titleId = `question-${question.id}`; return <fieldset className="question-card" aria-labelledby={titleId} key={question.id}><h3 className="question-title" id={titleId}>{index + 1}. {question.label}</h3>{question.sensitive && <p className="privacy-note question-helper">必要な鑑別のため、この段階でのみ表示しています。</p>}<div className="answer-grid">{ANSWERS.map(([value, label]) => <Choice key={value} name={question.id} selected={answers[question.id] === value} onChange={() => setAnswers((current) => ({ ...current, [question.id]: value }))}>{label}</Choice>)}</div></fieldset> })}</div>
     </section>}
 
     {screen === 'result' && result && <ResultScreen result={result} reset={reset} headingRef={resultHeadingRef} />}
