@@ -5,7 +5,8 @@ import { DISEASE_REGISTRY } from './abdominal-disease-registry.js'
 const UTILITY_ORDER = Object.freeze({ CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 })
 const LOWER_ABDOMINAL = new Set(['RLQ', 'LLQ', 'suprapubic'])
 const UPPER_ABDOMINAL = new Set(['epigastric', 'RUQ', 'LUQ'])
-const VASCULAR_LOCATIONS = new Set(['generalized', 'periumbilical', 'epigastric', 'flank', 'back'])
+const FLANK_LOCATIONS = new Set(['flank', 'right_flank', 'left_flank'])
+const VASCULAR_LOCATIONS = new Set(['generalized', 'periumbilical', 'epigastric', ...FLANK_LOCATIONS, 'back'])
 const CONFLICT_QUESTIONS = Object.freeze([
   { id: 'clarifyCurrentLocation', label: '現在もっとも痛い場所をもう一度確認してください。', priority: 'P1', priorityClass: 'CRITICAL', contextRelevance: 'CRITICAL', selectionReason: 'clarify conflicting pain location', sourceCandidates: [], candidateIds: [], activePatterns: ['conflict_clarification'] },
   { id: 'clarifyPainMigration', label: '痛みが移動した場合、発症時の場所から現在の場所までを順に確認してください。', priority: 'P1', priorityClass: 'CRITICAL', contextRelevance: 'CRITICAL', selectionReason: 'clarify conflicting migration history', sourceCandidates: [], candidateIds: [], activePatterns: ['conflict_clarification'] },
@@ -15,7 +16,7 @@ const PATTERNS = Object.freeze([
   { id: 'appendiceal_pattern', when: (c) => c.pain.primaryLocation === 'RLQ', high: ['initialPeriumbilical', 'migration', 'nauseaVomiting'] },
   { id: 'biliary_pattern', when: (c) => c.pain.primaryLocation === 'RUQ', high: ['feverChills', 'jaundice', 'mealRelation'] },
   { id: 'pancreatic_pattern', when: (c) => c.pain.primaryLocation === 'epigastric' && !cardiopulmonaryContext(c), high: ['backRadiation', 'nauseaVomiting', 'severePain'] },
-  { id: 'urinary_stone_pattern', when: (c) => ['flank', 'back'].includes(c.pain.primaryLocation), high: ['groinRadiation', 'hematuria', 'feverChills'] },
+  { id: 'urinary_stone_pattern', when: (c) => FLANK_LOCATIONS.has(c.pain.primaryLocation) || c.pain.primaryLocation === 'back', high: ['groinRadiation', 'hematuria', 'feverChills'] },
   { id: 'urinary_retention_pattern', when: (c) => c.pain.primaryLocation === 'suprapubic', high: ['urinarySymptoms', 'distension'] },
   { id: 'obstruction_pattern', when: (c) => ['generalized', 'periumbilical'].includes(c.pain.primaryLocation) && !vascularContext(c) && !metabolicContext(c), high: ['obstipation', 'distension', 'vomiting'] },
   { id: 'gynecologic_pattern', when: (c) => LOWER_ABDOMINAL.has(c.pain.primaryLocation), high: ['pregnancyPossible', 'unilateralPain', 'vaginalBleeding'] },

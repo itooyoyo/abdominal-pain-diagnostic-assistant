@@ -49,6 +49,7 @@ button, input { font: inherit; }
 .choice { color: #e8f1f7; background: #10263a; border-color: #355268; }
 .choice:hover { border-color: #45d6e8; }
 .choice.selected { color: #f8fbfd; background: #12384b; border-color: #45d6e8; box-shadow: inset 0 0 0 1px #45d6e8; }
+.choice small { color: #c5d3dd; }
 input { color: #f8fbfd; background: #071522; border-color: #496477; }
 input:focus-visible, button:focus-visible, .choice:has(input:focus-visible), [tabindex="-1"]:focus-visible { outline: 3px solid #8ce7f1; outline-offset: 2px; }
 .vital-card { background: #10263a; border-color: #355268; }
@@ -58,7 +59,11 @@ button.primary, button.secondary { min-height: 48px; border-radius: 12px; font-w
 button.primary { color: #06121d; background: #45d6e8; border-color: #45d6e8; box-shadow: 0 7px 18px rgba(69, 214, 232, .18); }
 button.primary:hover:not(:disabled) { background: #72e3ef; }
 button.secondary { color: #e8f1f7; background: #132b40; border-color: #45647b; }
-button:disabled { color: #78909f; background: #213141; border-color: #354a5b; opacity: 1; }
+button:disabled { color: #bdcbd4; background: #213141; border-color: #536c7f; opacity: 1; }
+
+.question-card { color: #e8f1f7; background: #10263a; border-color: #355268; }
+.question-card > .question-title { color: #f8fbfd; }
+.question-card > .question-helper { color: #c5d3dd; }
 
 .bottom-action {
   position: fixed;
@@ -88,6 +93,13 @@ button:disabled { color: #78909f; background: #213141; border-color: #354a5b; op
 .candidate-card, .supporting-candidate, .summary-action, .important-unknown, .guard-note { background: #10263a; border-color: #355268; }
 .candidate-title > span { color: #07111f; background: #45d6e8; }
 .results-stack li::marker { color: #45d6e8; }
+.results-stack summary { color: #dce8ef; }
+.candidate-card h4, .next-steps h3, .supporting-group > h3 { color: #c5d3dd; }
+.important-unknown, .guard-note { color: #d6e3eb; }
+.candidate-details { border-top-color: #45647b; }
+.supporting-candidate > summary small { color: #b9c9d6; }
+.supporting-candidate > .candidate-card { color: #e8f1f7; background: #0d2032; border-color: #355268; }
+.next-steps li span { color: #d6e3eb; background: #183247; }
 
 @media (max-width: 720px) {
   .app-shell { padding: 10px 10px calc(92px + env(safe-area-inset-bottom, 0px)); }
@@ -114,6 +126,7 @@ button:disabled { color: #78909f; background: #213141; border-color: #354a5b; op
   fieldset legend { margin-bottom: 7px; font-size: .9rem; }
   .choice-grid, .onset-grid, .vital-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
   .choice { min-height: 44px; padding: 8px 9px; border-radius: 10px; font-size: .84rem; line-height: 1.25; }
+  .pain-location-section .choice { min-height: 48px; }
   .choice.selected { padding-right: 28px; }
   .onset-grid .choice { min-height: 60px; }
   .choice small { margin-top: 2px; font-size: .68rem; line-height: 1.25; }

@@ -256,6 +256,47 @@ test('stone pattern prioritizes radiation hematuria and fever', () => {
   assert.deepEqual(selectedIds(raw('flank', {}, { onsetSpeed: 'rapid' })), ['groinRadiation', 'hematuria', 'feverChills'])
 })
 
+test('right flank sudden pain in an older adult retains stone and aortic safety with a stone discriminator', () => {
+  const evaluation = evaluate(raw('right_flank', {}, { age: 76, onsetSpeed: 'sudden' }))
+  const questions = selectAdaptiveQuestions(evaluation, { round: 1 })
+  assert.ok(ids(evaluation).includes('ureteral_stone'))
+  assert.ok(ids(evaluation).includes('aortic_disease'))
+  assert.ok(questions.some(({ id }) => ['groinRadiation', 'hematuria'].includes(id)))
+  assert.ok(questions.length <= 3)
+})
+
+test('right flank radiation and hematuria supports ureteral stone', () => {
+  assert.ok(ids(evaluate(raw('right_flank', { groinRadiation: 'present', hematuria: 'present' }))).includes('ureteral_stone'))
+})
+
+test('right flank fever retains stone and pyelonephritis differentiation', () => {
+  const evaluation = evaluate(raw('right_flank', { feverChills: 'present' }))
+  assert.ok(ids(evaluation).includes('ureteral_stone'))
+  assert.ok(ids(evaluation).includes('pyelonephritis_or_systemic_UTI'))
+  const questions = selectAdaptiveQuestions(evaluation, { round: 1 }).map(({ id }) => id)
+  assert.ok(questions.includes('groinRadiation'))
+  assert.ok(questions.includes('hematuria'))
+  assert.ok(questions.length <= 3)
+})
+
+test('right upper quadrant fatty meal keeps biliary flow after flank expansion', () => {
+  const evaluation = evaluate(raw('RUQ', { fattyMeal: 'present', mealRelation: 'present' }))
+  assert.ok(ids(evaluation).includes('biliary_colic'))
+  assert.deepEqual(selectAdaptiveQuestions(evaluation, { round: 1 }).map(({ id }) => id), ['feverChills', 'jaundice', 'nauseaVomiting'])
+})
+
+test('right lower quadrant migration keeps appendiceal flow after flank expansion', () => {
+  const evaluation = evaluate(raw('RLQ', { migration: 'present', initialPeriumbilical: 'present' }))
+  assert.ok(ids(evaluation).includes('acute_appendicitis'))
+  assert.ok(selectAdaptiveQuestions(evaluation, { round: 1 }).some(({ id }) => id === 'nauseaVomiting'))
+})
+
+test('right upper quadrant sudden pain retains perforation with location and onset evidence trace', () => {
+  const candidate = evaluate(raw('RUQ', {}, { onsetSpeed: 'sudden' })).candidates.find(({ id }) => id === 'GI_perforation')
+  assert.ok(candidate)
+  assert.deepEqual(candidate.supportingFindings.map(({ finding }) => finding), ['primaryLocation', 'onsetSpeed'])
+})
+
 test('urinary retention pattern is not occupied by gynecologic questions', () => {
   const selected = selectedIds(raw('suprapubic', {}, { age: 72 }))
   assert.ok(selected.includes('urinarySymptoms'))
